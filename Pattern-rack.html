@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern Rack — Beat Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0b0f;
+    --panel:#14161d;
+    --panel-2:#1a1d26;
+    --border:#272b36;
+    --step-off:#1d2029;
+    --step-off-border:#2b2f3a;
+    --step-on:#4c86ff;
+    --step-on-bright:#8fb4ff;
+    --step-glow:rgba(76,134,255,0.55);
+    --amber:#ff9b3d;
+    --amber-bright:#ffb968;
+    --amber-dim:#6b4423;
+    --text:#e7e9ee;
+    --text-dim:#8a8fa0;
+    --text-faint:#4d5262;
+    --font-display:'JetBrains Mono', monospace;
+    --font-body:'Inter', sans-serif;
+    --radius-step:6px;
+    --radius-panel:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(76,134,255,0.10), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(255,155,61,0.07), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  .page{max-width:980px;margin:0 auto;padding:40px 20px 80px;}
+
+  /* ---------- HERO ---------- */
+  .hero{padding:8px 0 34px;}
+  .lcd{
+    display:inline-flex;align-items:center;gap:10px;
+    font-family:var(--font-display);
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:12.5px;
+    letter-spacing:0.06em;
+    color:var(--amber-bright);
+    box-shadow:inset 0 0 12px rgba(255,155,61,0.06);
+  }
+  .lcd .sep{color:var(--text-faint);}
+  .lcd .unit{color:var(--text-dim);font-size:10.5px;margin-left:2px;}
+  .lcd b{color:var(--step-on-bright);font-weight:500;}
+  h1.title{
+    font-family:var(--font-display);
+    font-size:clamp(34px, 6vw, 54px);
+    line-height:1.02;
+    margin:20px 0 12px;
+    letter-spacing:-0.01em;
+    font-weight:700;
+  }
+  h1.title span{color:var(--step-on-bright);}
+  .tagline{color:var(--text-dim);font-size:15.5px;max-width:560px;line-height:1.55;margin:0;}
+
+  /* ---------- CONTROL PANEL ---------- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius-panel);
+    padding:26px 26px 24px;
+    margin-top:30px;
+  }
+  .panel-block + .panel-block{margin-top:22px;}
+  .panel-label{
+    display:block;
+    font-family:var(--font-display);
+    font-size:11.5px;
+    letter-spacing:0.12em;
+    color:var(--text-faint);
+    margin-bottom:11px;
+  }
+  .style-grid{
+    display:flex;flex-wrap:wrap;gap:9px;
+  }
+  .style-chip{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--text-dim);
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:9px 16px;
+    cursor:pointer;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .style-chip:hover{border-color:#3a3f4d;color:var(--text);}
+  .style-chip.active{
+    color:#0a0b0f;
+    background:var(--amber);
+    border-color:var(--amber);
+    box-shadow:0 0 0 3px rgba(255,155,61,0.18);
+  }
+  #promptInput{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:14.5px;
+    padding:13px 15px;
+    border-radius:10px;
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  #promptInput::placeholder{color:var(--text-faint);}
+  #promptInput:focus{border-color:var(--step-on);}
+
+  .bpm-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .bpm-control{
+    display:inline-flex;align-items:center;gap:0;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .bpm-control button{
+    width:38px;height:40px;
+    background:transparent;border:none;color:var(--text-dim);
+    font-size:17px;cursor:pointer;font-family:var(--font-display);
+  }
+  .bpm-control button:hover{color:var(--amber-bright);}
+  .bpm-control span{
+    font-family:var(--font-display);
+    min-width:56px;text-align:center;font-size:16px;color:var(--text);
+  }
+  .swing-note{color:var(--text-faint);font-size:12.5px;}
+
+  .generate-btn{
+    margin-top:24px;
+    width:100%;
+    background:var(--amber);
+    color:#1a0e02;
+    border:none;
+    font-family:var(--font-display);
+    font-weight:700;
+    letter-spacing:0.06em;
+    font-size:14.5px;
+    padding:16px;
+    border-radius:11px;
+    cursor:pointer;
+    transition:transform .1s ease, box-shadow .15s ease;
+    box-shadow:0 8px 24px -8px rgba(255,155,61,0.5);
+  }
+  .generate-btn:hover{box-shadow:0 10px 28px -6px rgba(255,155,61,0.65);}
+  .generate-btn:active{transform:scale(0.995);}
+
+  /* ---------- RACK ---------- */
+  .rack-section{margin-top:34px;}
+  .rack-toolbar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .tool-btn{
+    font-family:var(--font-display);
+    font-size:12.5px;letter-spacing:0.05em;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    padding:10px 16px;border-radius:9px;cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .tool-btn:hover{color:var(--text);border-color:#3a3f4d;}
+  .tool-btn.play{color:var(--step-on-bright);border-color:#2c3a5c;}
+  .tool-btn.play.playing{color:#0a0b0f;background:var(--step-on);border-color:var(--step-on);}
+  .tool-spacer{flex:1;}
+
+  .rack-frame{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius-panel);
+    padding:16px 14px;
+    overflow-x:auto;
+  }
+  .rack-row{
+    display:flex;align-items:center;
+    padding:5px 0;
+  }
+  .track-label{
+    position:sticky;left:0;
+    width:96px;min-width:96px;
+    background:var(--panel);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13px;
+    color:var(--text-dim);
+    padding-right:10px;
+    z-index:2;
+    cursor:default;
+  }
+  .track-label.is-synth{
+    color:var(--step-on-bright);
+    cursor:pointer;
+    display:flex;align-items:center;gap:4px;
+  }
+  .track-label.is-synth:hover{color:#fff;text-decoration:underline;}
+  
+  .step-groups{display:flex;gap:10px;}
+  .step-group{display:flex;gap:4px;}
+  .step{
+    width:22px;height:22px;
+    border-radius:var(--radius-step);
+    background:var(--step-off);
+    border:1px solid var(--step-off-border);
+    cursor:pointer;
+    padding:0;
+    transition:background .08s ease, box-shadow .12s ease, border-color .08s ease;
+  }
+  .step:hover{border-color:#454b5c;}
+  .step.on{
+    background:linear-gradient(180deg, var(--step-on-bright), var(--step-on));
+    border-color:var(--step-on-bright);
+    box-shadow:0 0 10px var(--step-glow);
+  }
+  .step.playhead{outline:2px solid var(--amber);outline-offset:1px;}
+  .step.sustain{
+    background:linear-gradient(180deg, rgba(143,180,255,0.55), rgba(76,134,255,0.45));
+    border-color:rgba(143,180,255,0.4);
+    box-shadow:0 0 6px rgba(76,134,255,0.3);
+  }
+
+  /* ---------- PIANO ROLL MODAL ---------- */
+  .modal-overlay{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(5,6,9,0.8);
+    backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    z-index:100;
+    opacity:0;pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .modal-overlay.open{opacity:1;pointer-events:auto;}
+  .piano-roll-modal{
+    width:900px;max-width:95vw;max-height:85vh;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius-panel);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 24px 64px rgba(0,0,0,0.6);
+  }
+  .piano-roll-header{
+    padding:16px 20px;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .piano-roll-title{
+    font-family:var(--font-display);
+    font-size:14px;font-weight:700;
+    color:var(--text);
+    display:flex;align-items:center;gap:8px;
+  }
+  .piano-roll-title span{color:var(--step-on-bright);}
+  .close-modal{
+    background:transparent;border:none;color:var(--text-dim);
+    font-size:18px;cursor:pointer;font-family:var(--font-display);
+  }
+  .close-modal:hover{color:var(--text);}
+  
+  .piano-roll-body{
+    display:flex;flex:1;overflow-y:auto;overflow-x:auto;position:relative;
+    background:#101217;
+  }
+  .piano-keys{
+    position:sticky;left:0;z-index:5;
+    display:flex;flex-direction:column;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    width:70px;min-width:70px;
+  }
+  .piano-key{
+    height:18px;
+    font-size:10px;font-family:var(--font-display);
+    display:flex;align-items:center;justify-content:flex-end;
+    padding-right:6px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+    user-select:none;cursor:pointer;
+  }
+  .piano-key.white{background:#222632;color:var(--text-dim);}
+  .piano-key.black{background:#111318;color:var(--text-faint);}
+  .piano-key:hover{background:var(--step-on);color:#fff;}
+
+  .piano-grid-area{
+    flex:1;display:flex;flex-direction:column;position:relative;min-width:800px;
+  }
+  .piano-grid-row{
+    height:18px;display:flex;
+    border-bottom:1px solid rgba(255,255,255,0.03);
+  }
+  .piano-cell{
+    flex:1;
+    border-right:1px solid rgba(255,255,255,0.03);
+    cursor:pointer;
+    transition:background .05s ease;
+  }
+  .piano-cell:hover{background:rgba(76,134,255,0.15);}
+  .piano-cell.has-note{
+    background:linear-gradient(180deg, var(--step-on-bright), var(--step-on));
+    border-color:var(--step-on-bright);
+    box-shadow:inset 0 0 4px rgba(0,0,0,0.3);
+  }
+  .piano-cell.note-start{ border-left:2px solid #fff; }
+  .piano-cell.preview{
+    background:rgba(255,155,61,0.35);
+    outline:1px dashed var(--amber-bright);
+  }
+  .piano-grid-area{ user-select:none; }
+  .piano-roll-footer{
+    padding:12px 20px;
+    background:var(--panel-2);
+    border-top:1px solid var(--border);
+    font-size:12px;color:var(--text-faint);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+
+  .rack-footnote{
+    color:var(--text-faint);font-size:12.5px;margin-top:14px;line-height:1.6;
+  }
+
+  footer.page-footer{
+    margin-top:38px;color:var(--text-faint);font-size:12.5px;line-height:1.7;
+  }
+  footer.page-footer a{color:var(--text-dim);}
+
+  @media (max-width:640px){
+    .track-label{width:74px;min-width:74px;font-size:11.5px;}
+    .step{width:18px;height:18px;}
+  }
+
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="lcd">
+      <span>PTRN·RACK</span>
+      <span class="sep">·</span>
+      <b id="lcdStyle">TRAP</b>
+      <span class="sep">·</span>
+      <b id="lcdBpm">140</b><span class="unit">BPM</span>
+      <span class="sep">·</span>
+      <b id="lcdSteps">32</b><span class="unit">STEPS</span>
+    </div>
+    <h1 class="title">PATTERN <span>RACK</span></h1>
+    <p class="tagline">Pick a style, describe a vibe if you want one, and generate a channel-rack-ready groove — preview it, click the 808 or any synth name to open its Piano Roll, then export a MIDI file you can drop straight into FL Studio.</p>
+  </header>
+
+  <section class="panel">
+    <div class="panel-block">
+      <label class="panel-label">01 — STYLE</label>
+      <div class="style-grid" id="styleGrid"></div>
+    </div>
+
+    <div class="panel-block">
+      <label class="panel-label">02 — PROMPT (optional)</label>
+      <input id="promptInput" type="text" placeholder="e.g. sparse and dark, half-time, rolling hi-hats, 96 bpm...">
+    </div>
+
+    <div class="panel-block">
+      <label class="panel-label">03 — TEMPO</label>
+      <div class="bpm-row">
+        <div class="bpm-control">
+          <button id="bpmDown" aria-label="Decrease tempo">–</button>
+          <span id="bpmValue">140</span>
+          <button id="bpmUp" aria-label="Increase tempo">+</button>
+        </div>
+        <span class="swing-note">Auto-set per style — override anytime, or say a number in your prompt.</span>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="generateBtn">GENERATE PATTERN</button>
+  </section>
+
+  <section class="rack-section">
+    <div class="rack-toolbar">
+      <button class="tool-btn play" id="playBtn">▶ PLAY</button>
+      <button class="tool-btn" id="randomizeBtn">RANDOMIZE</button>
+      <button class="tool-btn" id="clearBtn">CLEAR</button>
+      <div class="tool-spacer"></div>
+      <button class="tool-btn" id="exportDrumsBtn">⭳ DRUMS MIDI</button>
+      <button class="tool-btn" id="exportMelodyBtn">⭳ MELODY MIDI</button>
+      <button class="tool-btn" id="exportBtn">⭳ FULL MIDI</button>
+    </div>
+    <div class="rack-frame">
+      <div id="rackGrid"></div>
+    </div>
+    <p class="rack-footnote">Click any drum step to toggle it. Click <strong>808</strong> or any <strong>Synth</strong> label to open its Piano Roll — drag across cells to stretch a note's length, or click a single cell for a quick 1-step hit. Export the full pattern, just the drums, or just the melody as separate MIDI files.</p>
+  </section>
+
+  <footer class="page-footer">Patterns and previews are generated locally in your browser — nothing is uploaded.</footer>
+
+</div>
+
+<!-- PIANO ROLL MODAL -->
+<div class="modal-overlay" id="pianoModalOverlay">
+  <div class="piano-roll-modal">
+    <div class="piano-roll-header">
+      <div class="piano-roll-title">PIANO ROLL — <span id="modalTrackName">SYNTH</span></div>
+      <button class="close-modal" id="closeModalBtn">&times;</button>
+    </div>
+    <div class="piano-roll-body" id="pianoRollBody">
+      <div class="piano-keys" id="pianoKeysContainer"></div>
+      <div class="piano-grid-area" id="pianoGridContainer"></div>
+    </div>
+    <div class="piano-roll-footer">
+      <span>Click grid cells to place or remove note triggers across the 32 steps.</span>
+      <button class="tool-btn" id="closeModalBottomBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- CONFIG ---------------- */
+  const STEPS = 32; 
+  const TRACKS = ['kick','snare','hihat','perc','clap','bass808','synth','synth2','synth3'];
+  const TRACK_LABELS = {
+    kick:'kick', snare:'snare', hihat:'hi hat', perc:'perc', clap:'clap/snap',
+    bass808:'808', synth:'Synth', synth2:'Synth #2', synth3:'Synth #3'
+  };
+  // Every pitched track (808 included) now carries real notes with variable length
+  const MELODIC_TRACKS = ['bass808', 'synth', 'synth2', 'synth3'];
+
+  // MIDI mapping: [defaultNote, channel]
+  const MIDI_MAP = {
+    kick:[36,9], snare:[38,9], hihat:[42,9], perc:[37,9], clap:[39,9],
+    bass808:[33,1], synth:[60,2], synth2:[64,3], synth3:[67,4]
+  };
+
+  // Gives each synth its own timbre so layered notes read as separate voices
+  // rather than three copies of the same tone.
+  const SYNTH_VOICES = {
+    synth:  { wave:'sawtooth', filterFreq:3200, attackScale:1,   peak:0.28, unison:false },
+    synth2: { wave:'square',   filterFreq:5200, attackScale:0.6, peak:0.20, unison:true, detune:9 },
+    synth3: { wave:'triangle', filterFreq:1700, attackScale:2.2, peak:0.26, unison:false }
+  };
+
+  // 'synth' plays the lead line; synth2/synth3 borrow some of its onsets and
+  // stack a harmony interval on top (with their own independent note length,
+  // so they can ring on past the lead note and genuinely overlap it).
+  const HARMONY_INTERVALS = { synth2:[3,4,7,-5,-8], synth3:[7,12,-12,5,-5] };
+  const HARMONY_CHANCE = { synth2:0.55, synth3:0.4 };
+
+  // Piano Roll pitch range per track — 808 lives an octave-plus below the synths
+  function getPianoRange(track){
+    return track === 'bass808' ? {min:24, max:48} : {min:60, max:84};
+  }
+
+  // Weighted note-length choices, in 16th-note steps. Long tails let a note
+  // ring well past a single bar (16 steps) for pads/swells; short ones keep
+  // the groove moving. Every generation re-rolls these, so melodies differ each time.
+  const MELODY_LENGTH_OPTIONS = [
+    {len:1,w:.30},{len:2,w:.22},{len:3,w:.08},{len:4,w:.16},
+    {len:6,w:.08},{len:8,w:.09},{len:12,w:.04},{len:16,w:.02},{len:24,w:.01}
+  ];
+  const BASS_LENGTH_OPTIONS = [
+    {len:2,w:.14},{len:3,w:.08},{len:4,w:.20},{len:6,w:.14},
+    {len:8,w:.20},{len:12,w:.12},{len:16,w:.09},{len:32,w:.03}
+  ];
+
+  function weightedPick(options){
+    const total = options.reduce((s,o)=>s+o.w,0);
+    let r = Math.random()*total;
+    for(const o of options){ if(r < o.w) return o.len; r -= o.w; }
+    return options[options.length-1].len;
+  }
+
+  function pickScaleForStyle(styleKey){
+    const darkStyles = ['trap','dnb','techno','lofi'];
+    // minor pentatonic for moodier styles, major-leaning pentatonic otherwise
+    return darkStyles.includes(styleKey) ? [0,3,5,7,10] : [0,2,4,7,9];
+  }
+
+  function addHarmonyLayer(trackKey, notes, leadNotes){
+    const intervals = HARMONY_INTERVALS[trackKey];
+    if(!intervals || !leadNotes || !leadNotes.length) return notes;
+    const chance = HARMONY_CHANCE[trackKey] || 0.5;
+    leadNotes.forEach(lead=>{
+      if(Math.random() >= chance) return;
+      const maxLen = STEPS - lead.step;
+      if(maxLen <= 0) return;
+      const length = Math.min(weightedPick(MELODY_LENGTH_OPTIONS), maxLen);
+      const interval = intervals[Math.floor(Math.random() * intervals.length)];
+      // independent length means this can ring on past the lead note and
+      // into the next one — that's the intended overlap between voices
+      notes.push({ step: lead.step, note: lead.note + interval, length });
+    });
+    return notes;
+  }
+
+  // Builds a genuinely new melody every call: walks across the full step range,
+  // rolling per-position odds from the style's density template, and when a
+  // note fires it picks a random scale degree and a random length (which can
+  // run well past one bar) before jumping the cursor ahead by that length.
+  // When leadNotes is passed (synth2/synth3), a harmony layer is stacked on
+  // top of the lead's own onsets so the voices overlap into a fuller chord.
+  function generateMelody(trackKey, densityTemplate, styleKey, leadNotes){
+    const isBass = trackKey === 'bass808';
+    const scale = pickScaleForStyle(styleKey);
+    const root = isBass ? 33 : MIDI_MAP[trackKey][0];
+    const templateSum = densityTemplate.reduce((a,b)=>a+b,0);
+    const notes = [];
+    let cursor = 0;
+    let lastDegreeIdx = null;
+
+    while(cursor < STEPS){
+      const posInBar = cursor % 16;
+      const prob = densityTemplate[posInBar] || 0;
+      // basslines get a density floor so they still carry the groove, unless
+      // the style/prompt explicitly zeroed the whole track out
+      const startChance = (isBass && templateSum > 0) ? Math.max(prob, 0.25) : prob;
+
+      if(Math.random() < startChance){
+        const maxLen = STEPS - cursor;
+        let length = isBass ? weightedPick(BASS_LENGTH_OPTIONS) : weightedPick(MELODY_LENGTH_OPTIONS);
+        length = Math.min(length, maxLen);
+
+        let degreeIdx = Math.floor(Math.random() * scale.length);
+        if(degreeIdx === lastDegreeIdx && scale.length > 1){ degreeIdx = (degreeIdx + 1) % scale.length; }
+        lastDegreeIdx = degreeIdx;
+
+        const octaveShift = isBass
+          ? (Math.random() < 0.12 ? 12 : 0)
+          : (Math.random() < 0.18 ? (Math.random() < 0.5 ? 12 : -12) : 0);
+
+        notes.push({ step: cursor, note: root + scale[degreeIdx] + octaveShift, length });
+        cursor += length;
+      } else {
+        cursor += 1;
+      }
+    }
+    return addHarmonyLayer(trackKey, notes, leadNotes);
+  }
+
+  const STYLES = {
+    trap: { label:'Trap', bpm:140, patterns:{
+      kick:   [.9,0,0,0, 0,0,.35,0, 0,0,.55,0, 0,0,.3,0],
+      snare:  [0,0,0,0, .92,0,0,0, 0,0,0,0, .92,0,0,.2],
+      clap:   [0,0,0,0, .55,0,0,0, 0,0,0,0, .55,0,0,0],
+      hihat:  [.8,.35,.7,.35, .8,.5,.7,.35, .8,.5,.7,.4, .8,.5,.7,.6],
+      perc:   [.1,.1,.2,.1, .1,.2,.1,.15, .2,.1,.1,.2, .15,.1,.2,.25],
+      bass808:[.7,0,0,.2, 0,0,.3,0, .6,0,0,.2, 0,0,.35,0],
+      synth:  [.55,0,0,0, 0,0,0,0, .5,0,0,0, 0,0,0,0],
+      synth2: [0,0,.35,0, 0,0,.35,0, 0,0,.35,0, 0,0,.35,0],
+      synth3: [0,0,0,0, .3,0,0,.15, 0,0,0,0, .3,0,0,.15]
+    }},
+    hiphop: { label:'Hip-Hop', bpm:92, patterns:{
+      kick:   [.85,0,0,.15, 0,0,0,.25, 0,0,.6,0, 0,0,0,0],
+      snare:  [0,0,0,0, .9,0,0,0, 0,0,0,0, .9,0,0,0],
+      clap:   [0,0,0,0, .35,0,0,0, 0,0,0,0, .35,0,0,0],
+      hihat:  [.6,.2,.5,.2, .6,.3,.5,.2, .6,.3,.5,.2, .6,.3,.5,.4],
+      perc:   [.1,0,.15,0, .1,0,.15,0, .15,0,.1,0, .15,0,.2,.1],
+      bass808:[.6,0,0,0, 0,0,.25,0, .55,0,0,.15, 0,0,0,0],
+      synth:  [.5,0,0,0, 0,0,0,0, 0,0,.4,0, 0,0,0,0],
+      synth2: [0,0,0,0, .3,0,0,0, 0,0,0,0, .3,0,0,0],
+      synth3: [.2,0,0,0, 0,0,.15,0, 0,0,0,0, 0,0,.15,0]
+    }},
+    house: { label:'House', bpm:126, patterns:{
+      kick:   [.95,0,0,0, .95,0,0,0, .95,0,0,0, .95,0,0,0],
+      snare:  [0,0,0,0, .3,0,0,0, 0,0,0,0, .3,0,0,0],
+      clap:   [0,0,0,0, .85,0,0,0, 0,0,0,0, .85,0,0,0],
+      hihat:  [0,0,.7,0, 0,0,.7,0, 0,0,.7,0, 0,0,.7,0],
+      perc:   [.15,.15,.15,.15, .15,.15,.15,.15, .15,.15,.15,.15, .15,.15,.15,.15],
+      bass808:[0,0,.6,0, 0,.55,0,0, 0,0,.6,0, 0,.55,0,0],
+      synth:  [0,0,0,0, .5,0,0,0, 0,0,0,0, .5,0,0,.3],
+      synth2: [.4,0,0,0, 0,0,.4,0, 0,0,0,0, 0,0,.4,0],
+      synth3: [0,0,0,.3, 0,0,0,0, 0,0,0,.3, 0,0,0,0]
+    }},
+    techno: { label:'Techno', bpm:132, patterns:{
+      kick:   [.95,0,0,0, .95,0,0,0, .95,0,0,0, .95,0,0,0],
+      snare:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+      clap:   [0,0,0,0, .7,0,0,0, 0,0,0,0, .7,0,0,0],
+      hihat:  [.3,.5,.3,.5, .3,.5,.3,.5, .3,.5,.3,.5, .3,.5,.3,.5],
+      perc:   [0,.2,0,.2, 0,.25,0,.2, 0,.2,0,.25, 0,.2,0,.3],
+      bass808:[.6,0,.4,0, .6,0,.4,0, .6,0,.4,0, .6,0,.4,0],
+      synth:  [.35,0,0,0, 0,0,0,0, .35,0,0,0, 0,0,0,0],
+      synth2: [0,0,0,0, 0,0,.3,0, 0,0,0,0, 0,0,.3,0],
+      synth3: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,.2]
+    }},
+    dnb: { label:'D&B', bpm:174, patterns:{
+      kick:   [.85,0,0,0, 0,0,.4,0, 0,.3,0,0, .5,0,0,0],
+      snare:  [0,0,0,0, .9,0,0,.2, 0,0,0,0, .9,0,.25,0],
+      clap:   [0,0,0,0, .4,0,0,0, 0,0,0,0, .4,0,0,0],
+      hihat:  [.8,.7,.8,.7, .8,.7,.8,.7, .8,.7,.8,.7, .8,.7,.8,.7],
+      perc:   [.2,.15,.2,.15, .2,.2,.2,.15, .25,.15,.2,.2, .2,.15,.25,.3],
+      bass808:[.7,.2,0,.3, 0,.2,.5,0, .3,0,.5,.2, 0,.4,0,.2],
+      synth:  [.3,0,0,0, 0,0,0,0, .3,0,0,0, 0,0,0,0],
+      synth2: [0,0,.25,0, 0,0,.25,0, 0,0,.25,0, 0,0,.25,0],
+      synth3: [0,0,0,0, .2,0,0,0, 0,0,0,0, .2,0,0,.15]
+    }},
+    lofi: { label:'Lo-Fi', bpm:80, patterns:{
+      kick:   [.75,0,0,0, 0,0,.2,0, 0,0,.45,0, 0,0,0,0],
+      snare:  [0,0,0,0, .7,0,0,0, 0,0,0,0, .7,0,0,0],
+      clap:   [0,0,0,0, .2,0,0,0, 0,0,0,0, .2,0,0,0],
+      hihat:  [.4,0,.35,0, .4,0,.3,.15, .4,0,.35,0, .4,0,.3,.2],
+      perc:   [.1,0,0,.1, 0,.1,0,0, .1,0,0,.1, 0,.1,0,.15],
+      bass808:[.5,0,0,0, 0,0,.2,0, .45,0,0,0, 0,0,0,0],
+      synth:  [.45,0,0,0, 0,0,.2,0, 0,0,.4,0, 0,0,.2,0],
+      synth2: [0,0,.3,0, 0,.2,0,0, 0,0,.3,0, 0,.2,0,0],
+      synth3: [0,0,0,.2, 0,0,0,0, 0,0,0,.2, 0,0,0,0]
+    }},
+    reggaeton: { label:'Reggaeton', bpm:95, patterns:{
+      kick:   [.9,0,0,0, 0,0,.75,0, .85,0,0,0, 0,0,.75,0],
+      snare:  [0,0,0,.6, .5,0,0,0, 0,0,0,.6, .5,0,0,0],
+      clap:   [0,0,0,.5, .45,0,0,0, 0,0,0,.5, .45,0,0,0],
+      hihat:  [.6,.5,.6,.5, .6,.5,.6,.5, .6,.5,.6,.5, .6,.5,.6,.5],
+      perc:   [.2,.1,.2,.1, .2,.1,.2,.1, .25,.1,.2,.1, .2,.15,.2,.2],
+      bass808:[.6,0,0,0, 0,0,.5,0, .55,0,0,0, 0,0,.5,0],
+      synth:  [.4,0,0,0, 0,0,0,0, .4,0,0,0, 0,0,0,0],
+      synth2: [0,0,.3,0, 0,0,.3,0, 0,0,.3,0, 0,0,.3,0],
+      synth3: [0,0,0,0, .25,0,0,0, 0,0,0,0, .25,0,0,0]
+    }},
+    pop: { label:'Pop', bpm:110, patterns:{
+      kick:   [.85,0,0,0, 0,0,.3,0, .6,0,0,0, 0,0,.3,0],
+      snare:  [0,0,0,0, .85,0,0,0, 0,0,0,0, .85,0,0,.15],
+      clap:   [0,0,0,0, .3,0,0,0, 0,0,0,0, .3,0,0,0],
+      hihat:  [.5,.5,.5,.5, .5,.5,.5,.5, .5,.5,.5,.5, .5,.5,.5,.6],
+      perc:   [.15,.1,.15,.1, .15,.1,.15,.1, .15,.1,.15,.1, .15,.15,.15,.2],
+      bass808:[.5,0,0,.15, 0,0,.3,0, .45,0,0,.15, 0,0,.3,0],
+      synth:  [.55,0,0,0, .3,0,0,0, .5,0,0,0, .3,0,0,0],
+      synth2: [0,0,.35,0, 0,0,.35,0, 0,0,.35,0, 0,0,.35,0],
+      synth3: [0,0,0,.2, 0,0,0,.2, 0,0,0,.2, 0,0,0,.2]
+    }}
+  };
+
+  const STYLE_KEYS = Object.keys(STYLES);
+
+  /* ---------------- STATE ---------------- */
+  let currentStyleKey = 'trap';
+  let currentBpm = STYLES.trap.bpm;
+  
+  // pattern stores either boolean (for drums) or pitch arrays / objects for synths
+  // For standard tracks: boolean array length 32
+  // For synth tracks: array of objects {step: number, note: number} or array of active notes per step
+  let pattern = {}; 
+  
+  let isPlaying = false;
+  let playTimer = null;
+  let currentStepIndex = 0;
+  let audioCtx = null;
+  let noiseBuffer = null;
+  let activeModalTrack = null;
+  let dragState = null; // {track, note, startStep, endStep} while drawing a note's length
+
+  /* ---------------- DOM refs ---------------- */
+  const styleGrid = document.getElementById('styleGrid');
+  const promptInput = document.getElementById('promptInput');
+  const bpmValue = document.getElementById('bpmValue');
+  const bpmDown = document.getElementById('bpmDown');
+  const bpmUp = document.getElementById('bpmUp');
+  const generateBtn = document.getElementById('generateBtn');
+  const rackGrid = document.getElementById('rackGrid');
+  const playBtn = document.getElementById('playBtn');
+  const randomizeBtn = document.getElementById('randomizeBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const exportDrumsBtn = document.getElementById('exportDrumsBtn');
+  const exportMelodyBtn = document.getElementById('exportMelodyBtn');
+  const lcdStyle = document.getElementById('lcdStyle');
+  const lcdBpm = document.getElementById('lcdBpm');
+  
+  const pianoModalOverlay = document.getElementById('pianoModalOverlay');
+  const modalTrackName = document.getElementById('modalTrackName');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const closeModalBottomBtn = document.getElementById('closeModalBottomBtn');
+  const pianoKeysContainer = document.getElementById('pianoKeysContainer');
+  const pianoGridContainer = document.getElementById('pianoGridContainer');
+
+  /* ---------------- BUILD STYLE CHIPS ---------------- */
+  STYLE_KEYS.forEach(key=>{
+    const chip = document.createElement('button');
+    chip.className = 'style-chip' + (key===currentStyleKey ? ' active':'');
+    chip.textContent = STYLES[key].label;
+    chip.dataset.style = key;
+    chip.addEventListener('click', ()=>{
+      currentStyleKey = key;
+      currentBpm = STYLES[key].bpm;
+      bpmValue.textContent = currentBpm;
+      [...styleGrid.children].forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+    styleGrid.appendChild(chip);
+  });
+
+  bpmDown.addEventListener('click', ()=>{ currentBpm = Math.max(50,currentBpm-2); bpmValue.textContent=currentBpm; });
+  bpmUp.addEventListener('click', ()=>{ currentBpm = Math.min(220,currentBpm+2); bpmValue.textContent=currentBpm; });
+
+  /* ---------------- INITIALIZE PATTERNS ---------------- */
+  function initPatternFromStyles(){
+    const style = STYLES[currentStyleKey];
+    const {patterns, bpm} = applyPromptModifiers(style.patterns, promptInput.value, currentBpm);
+    currentBpm = bpm;
+    bpmValue.textContent = currentBpm;
+
+    let leadSynthNotes = null;
+    TRACKS.forEach(t=>{
+      if(MELODIC_TRACKS.includes(t)){
+        const lead = (t === 'synth2' || t === 'synth3') ? leadSynthNotes : null;
+        pattern[t] = generateMelody(t, patterns[t], currentStyleKey, lead);
+        if(t === 'synth') leadSynthNotes = pattern[t];
+      } else {
+        const src = patterns[t];
+        const bar1 = src.map(prob=> Math.random() < prob);
+        const bar2 = src.map(prob=> Math.random() < prob);
+        pattern[t] = bar1.concat(bar2);
+      }
+    });
+
+    if(Math.random() < 0.6){
+      for(let i=28;i<32;i++){
+        if(Math.random() < 0.5) pattern.hihat[i] = true;
+        if(Math.random() < 0.3) pattern.perc[i] = true;
+      }
+    }
+
+    lcdStyle.textContent = STYLES[currentStyleKey].label.toUpperCase();
+    lcdBpm.textContent = currentBpm;
+    renderRack();
+  }
+
+  function applyPromptModifiers(basePatterns, promptText, baseBpm){
+    const patterns = {};
+    TRACKS.forEach(t=> patterns[t] = basePatterns[t].slice());
+    let bpm = baseBpm;
+    const p = (promptText||'').toLowerCase();
+
+    if(/sparse|minimal|empty|stripped|barely/.test(p)){
+      TRACKS.forEach(t=> patterns[t] = patterns[t].map(v=>v*0.55));
+    }
+    if(/busy|dense|heavy|packed|maximal/.test(p)){
+      TRACKS.forEach(t=> patterns[t] = patterns[t].map(v=>Math.min(0.95, v*1.5+0.05)));
+    }
+    if(/half.?time|laid.?back|lay back/.test(p)){
+      patterns.snare = new Array(16).fill(0).concat(new Array(16).fill(0)).map((_,i)=> (i%16===8? .9:0));
+      patterns.clap = patterns.snare.slice();
+    }
+    if(/no hi.?hat|without hi.?hat|drop the hats?/.test(p)){
+      patterns.hihat = patterns.hihat.map(()=>0);
+    }
+    if(/no snare/.test(p)){ patterns.snare = patterns.snare.map(()=>0); }
+    if(/no clap/.test(p)){ patterns.clap = patterns.clap.map(()=>0); }
+    if(/roll|fast hi.?hat|rolling hi.?hat|shuffle hats?/.test(p)){
+      patterns.hihat = patterns.hihat.map(v=>Math.max(v,0.78));
+    }
+    if(/dark|moody|minor|eerie/.test(p)){
+      patterns.synth = patterns.synth.map(v=>v*0.6);
+      patterns.synth3 = patterns.synth3.map(v=>v*0.6);
+    }
+    if(/no 808|no bass/.test(p)){ patterns.bass808 = patterns.bass808.map(()=>0); }
+    if(/no synth/.test(p)){ patterns.synth=patterns.synth.map(()=>0); patterns.synth2=patterns.synth2.map(()=>0); patterns.synth3=patterns.synth3.map(()=>0); }
+
+    const bpmMatch = p.match(/(\d{2,3})\s?bpm/);
+    if(bpmMatch){ bpm = Math.max(50, Math.min(220, parseInt(bpmMatch[1],10))); }
+
+    return {patterns, bpm};
+  }
+
+  generateBtn.addEventListener('click', initPatternFromStyles);
+  randomizeBtn.addEventListener('click', initPatternFromStyles);
+
+  clearBtn.addEventListener('click', ()=>{
+    TRACKS.forEach(t=>{
+      if(MELODIC_TRACKS.includes(t)) pattern[t] = [];
+      else pattern[t] = new Array(STEPS).fill(false);
+    });
+    renderRack();
+  });
+
+  /* ---------------- RENDER RACK ---------------- */
+  function renderRack(){
+    rackGrid.innerHTML = '';
+    TRACKS.forEach(t=>{
+      const row = document.createElement('div');
+      row.className = 'rack-row';
+
+      const label = document.createElement('div');
+      const isMelodic = MELODIC_TRACKS.includes(t);
+      label.className = 'track-label' + (isMelodic ? ' is-synth':'');
+      label.textContent = (isMelodic ? '🎹 ' : '') + TRACK_LABELS[t];
+      
+      if(isMelodic){
+        label.title = "Click to open Piano Roll";
+        label.addEventListener('click', ()=> openPianoRoll(t));
+      }
+      row.appendChild(label);
+
+      const groupsWrap = document.createElement('div');
+      groupsWrap.className = 'step-groups';
+
+      for(let g=0; g<STEPS/4; g++){
+        const group = document.createElement('div');
+        group.className = 'step-group';
+        for(let i=0;i<4;i++){
+          const idx = g*4+i;
+          const btn = document.createElement('button');
+
+          let isOn = false, isSustain = false;
+          if(isMelodic){
+            const covering = pattern[t].find(n => idx >= n.step && idx < n.step + (n.length||1));
+            if(covering){ if(covering.step === idx) isOn = true; else isSustain = true; }
+          } else {
+            isOn = pattern[t][idx];
+          }
+
+          btn.className = 'step' + (isOn ? ' on':'') + (isSustain ? ' sustain':'');
+          btn.dataset.track = t;
+          btn.dataset.index = idx;
+          btn.setAttribute('aria-label', TRACK_LABELS[t]+' step '+(idx+1));
+          
+          btn.addEventListener('click', ()=>{
+            if(isMelodic){
+              // clicking anywhere in a note's span removes the whole note;
+              // clicking empty space adds a fresh 1-step hit (edit its
+              // pitch/length in the Piano Roll)
+              const covering = pattern[t].find(n => idx >= n.step && idx < n.step + (n.length||1));
+              if(covering){
+                pattern[t] = pattern[t].filter(n => n !== covering);
+              } else {
+                pattern[t].push({ step: idx, note: MIDI_MAP[t][0], length: 1 });
+              }
+              renderRack();
+            } else {
+              pattern[t][idx] = !pattern[t][idx];
+              btn.classList.toggle('on', pattern[t][idx]);
+            }
+          });
+          group.appendChild(btn);
+        }
+        groupsWrap.appendChild(group);
+      }
+      row.appendChild(groupsWrap);
+      rackGrid.appendChild(row);
+    });
+  }
+
+  /* ---------------- PIANO ROLL MODAL LOGIC ---------------- */
+  function openPianoRoll(trackKey){
+    activeModalTrack = trackKey;
+    modalTrackName.textContent = TRACK_LABELS[trackKey].toUpperCase();
+    buildPianoRollUI();
+    pianoModalOverlay.classList.add('open');
+  }
+
+  function closePianoRoll(){
+    pianoModalOverlay.classList.remove('open');
+    renderRack(); // refresh main rack view to reflect any changes
+  }
+
+  closeModalBtn.addEventListener('click', closePianoRoll);
+  closeModalBottomBtn.addEventListener('click', closePianoRoll);
+  pianoModalOverlay.addEventListener('click', (e)=>{ if(e.target === pianoModalOverlay) closePianoRoll(); });
+
+  const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  function getNoteName(midiNum){
+    const name = NOTE_NAMES[midiNum % 12];
+    const octave = Math.floor(midiNum / 12) - 1;
+    return name + octave;
+  }
+  function isBlackKey(midiNum){
+    const n = midiNum % 12;
+    return [1,3,6,8,10].includes(n);
+  }
+
+  function buildPianoRollUI(){
+    pianoKeysContainer.innerHTML = '';
+    pianoGridContainer.innerHTML = '';
+    const range = getPianoRange(activeModalTrack);
+
+    for(let note = range.max; note >= range.min; note--){
+      const isBlack = isBlackKey(note);
+
+      const keyEl = document.createElement('div');
+      keyEl.className = 'piano-key ' + (isBlack ? 'black' : 'white');
+      keyEl.textContent = getNoteName(note);
+      keyEl.addEventListener('click', ()=>{
+        ensureAudio();
+        triggerMelodicNote(activeModalTrack, note, 2);
+      });
+      pianoKeysContainer.appendChild(keyEl);
+
+      const rowEl = document.createElement('div');
+      rowEl.className = 'piano-grid-row';
+      rowEl.dataset.note = note;
+
+      for(let step=0; step<STEPS; step++){
+        const cellEl = document.createElement('div');
+        cellEl.className = 'piano-cell';
+        cellEl.dataset.step = step;
+        cellEl.dataset.note = note;
+
+        const covering = pattern[activeModalTrack].find(n => n.note === note && step >= n.step && step < n.step + (n.length||1));
+        if(covering){
+          cellEl.classList.add('has-note');
+          if(covering.step === step) cellEl.classList.add('note-start');
+        }
+
+        rowEl.appendChild(cellEl);
+      }
+      pianoGridContainer.appendChild(rowEl);
+    }
+  }
+
+  // Drag across cells in a row to set a note's length; a plain click (no
+  // drag) makes a 1-step note; clicking an existing note's span deletes it.
+  pianoGridContainer.addEventListener('mousedown', (e)=>{
+    const cell = e.target.closest('.piano-cell');
+    if(!cell) return;
+    e.preventDefault();
+    ensureAudio();
+    const step = parseInt(cell.dataset.step, 10);
+    const note = parseInt(cell.dataset.note, 10);
+    const track = activeModalTrack;
+
+    const existing = pattern[track].find(n => n.note === note && step >= n.step && step < n.step + (n.length||1));
+    if(existing){
+      pattern[track] = pattern[track].filter(n => n !== existing);
+      buildPianoRollUI();
+      return;
+    }
+    dragState = { track, note, startStep: step, endStep: step };
+    updateDragPreview();
+  });
+
+  pianoGridContainer.addEventListener('mousemove', (e)=>{
+    if(!dragState) return;
+    const cell = e.target.closest('.piano-cell');
+    if(!cell) return;
+    const step = parseInt(cell.dataset.step, 10);
+    const note = parseInt(cell.dataset.note, 10);
+    if(note !== dragState.note) return; // only drag within the same pitch row
+    dragState.endStep = step;
+    updateDragPreview();
+  });
+
+  document.addEventListener('mouseup', ()=>{
+    if(!dragState) return;
+    const { track, note, startStep, endStep } = dragState;
+    const s = Math.min(startStep, endStep), e2 = Math.max(startStep, endStep);
+    const length = e2 - s + 1;
+    pattern[track] = pattern[track].filter(n => !(n.note === note && n.step <= e2 && (n.step + (n.length||1) - 1) >= s));
+    pattern[track].push({ step: s, note, length });
+    triggerMelodicNote(track, note, length);
+    dragState = null;
+    buildPianoRollUI();
+  });
+
+  function updateDragPreview(){
+    const { note, startStep, endStep } = dragState;
+    const s = Math.min(startStep, endStep), e2 = Math.max(startStep, endStep);
+    const row = [...pianoGridContainer.children].find(r => parseInt(r.dataset.note,10) === note);
+    if(!row) return;
+    [...row.children].forEach(cell=>{
+      const step = parseInt(cell.dataset.step, 10);
+      cell.classList.toggle('preview', step >= s && step <= e2);
+    });
+  }
+
+  /* ---------------- AUDIO PREVIEW ---------------- */
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const size = audioCtx.sampleRate * 0.5;
+      noiseBuffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for(let i=0;i<size;i++) data[i] = Math.random()*2-1;
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function noiseSource(){
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    return src;
+  }
+
+  function midiToFreq(midi){
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  // Fast, consistent envelope: the note is audible the instant it plays
+  // (tiny attack, capped low regardless of length), holds at full volume for
+  // most of its duration, then releases in the last bit. Long/held notes
+  // still ring out fully — they just don't fade in slowly to get there.
+  function envelopeGain(g, t, peak, durationSec){
+    const attack = Math.min(0.012, durationSec * 0.2);
+    const release = Math.min(0.3, durationSec * 0.35);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.setValueAtTime(peak, t + Math.max(attack, durationSec - release));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + durationSec);
+  }
+
+  // lengthSteps is in 16th-note steps and controls how long the note rings,
+  // not how it fades in. Each synth track uses its own voice config so
+  // overlapping layers read as distinct instruments rather than three
+  // copies of the same tone.
+  function triggerMelodicNote(track, midiNote, lengthSteps){
+    lengthSteps = lengthSteps || 1;
+    const isBass = track === 'bass808';
+    const stepSeconds = (60/currentBpm/4);
+    const durationSec = Math.max(0.12, lengthSteps * stepSeconds * 0.95);
+    const freq = midiToFreq(midiNote);
+
+    const t = audioCtx.currentTime;
+    const g = audioCtx.createGain();
+    g.connect(audioCtx.destination);
+
+    if(isBass){
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.82, t + Math.min(0.5, durationSec * 0.6));
+      envelopeGain(g, t, 0.85, durationSec);
+      osc.connect(g);
+      osc.start(t); osc.stop(t + durationSec + 0.05);
+      return;
+    }
+
+    const voice = SYNTH_VOICES[track] || SYNTH_VOICES.synth;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = voice.filterFreq;
+    filter.connect(g);
+
+    const oscillators = [];
+    const mainOsc = audioCtx.createOscillator();
+    mainOsc.type = voice.wave;
+    mainOsc.frequency.value = freq;
+    mainOsc.connect(filter);
+    oscillators.push(mainOsc);
+
+    if(voice.unison){
+      // two slightly detuned copies for a thicker, wider pluck
+      const oscA = audioCtx.createOscillator();
+      oscA.type = voice.wave; oscA.frequency.value = freq; oscA.detune.value = voice.detune;
+      oscA.connect(filter);
+      const oscB = audioCtx.createOscillator();
+      oscB.type = voice.wave; oscB.frequency.value = freq; oscB.detune.value = -voice.detune;
+      oscB.connect(filter);
+      oscillators.push(oscA, oscB);
+    }
+
+    envelopeGain(g, t, voice.peak, durationSec);
+
+    oscillators.forEach(o=>{ o.start(t); o.stop(t + durationSec + 0.05); });
+  }
+
+  function triggerSound(track, stepIndex){
+    const t = audioCtx.currentTime;
+    const g = audioCtx.createGain();
+    g.connect(audioCtx.destination);
+
+    if(track==='kick'){
+      const osc = audioCtx.createOscillator();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(150,t);
+      osc.frequency.exponentialRampToValueAtTime(45,t+0.13);
+      g.gain.setValueAtTime(1,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+      osc.connect(g); osc.start(t); osc.stop(t+0.3);
+    } else if(track==='snare'){
+      const src = noiseSource();
+      const bp = audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800;
+      g.gain.setValueAtTime(0.7,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+      src.connect(bp); bp.connect(g); src.start(t); src.stop(t+0.18);
+    } else if(track==='clap'){
+      const src = noiseSource();
+      const bp = audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1200;
+      g.gain.setValueAtTime(0.6,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+      src.connect(bp); bp.connect(g); src.start(t); src.stop(t+0.22);
+    } else if(track==='hihat'){
+      const src = noiseSource();
+      const hp = audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+      g.gain.setValueAtTime(0.35,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+      src.connect(hp); hp.connect(g); src.start(t); src.stop(t+0.07);
+    } else if(track==='perc'){
+      const osc = audioCtx.createOscillator();
+      osc.type='triangle'; osc.frequency.setValueAtTime(500,t);
+      g.gain.setValueAtTime(0.4,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+      osc.connect(g); osc.start(t); osc.stop(t+0.09);
+    } else if(MELODIC_TRACKS.includes(track)){
+      const notesOnStep = pattern[track].filter(n => n.step === stepIndex);
+      notesOnStep.forEach(n => triggerMelodicNote(track, n.note, n.length));
+    }
+  }
+
+  function clearPlayheads(){
+    document.querySelectorAll('.step.playhead').forEach(el=>el.classList.remove('playhead'));
+  }
+
+  function highlightStep(i){
+    clearPlayheads();
+    document.querySelectorAll('.step[data-index="'+i+'"]').forEach(el=>el.classList.add('playhead'));
+  }
+
+  function playStep(i){
+    TRACKS.forEach(t=>{
+      if(MELODIC_TRACKS.includes(t)){
+        if(pattern[t].some(n => n.step === i)) triggerSound(t, i);
+      } else {
+        if(pattern[t][i]) triggerSound(t, i);
+      }
+    });
+  }
+
+  function startPlayback(){
+    ensureAudio();
+    isPlaying = true;
+    playBtn.textContent = '■ STOP';
+    playBtn.classList.add('playing');
+    currentStepIndex = 0;
+    const stepTimeMs = (60/currentBpm/4)*1000;
+    playStep(currentStepIndex); highlightStep(currentStepIndex);
+    playTimer = setInterval(()=>{
+      currentStepIndex = (currentStepIndex+1) % STEPS;
+      playStep(currentStepIndex);
+      highlightStep(currentStepIndex);
+    }, stepTimeMs);
+  }
+
+  function stopPlayback(){
+    isPlaying = false;
+    clearInterval(playTimer);
+    playBtn.textContent = '▶ PLAY';
+    playBtn.classList.remove('playing');
+    clearPlayheads();
+  }
+
+  playBtn.addEventListener('click', ()=>{
+    if(isPlaying) stopPlayback(); else startPlayback();
+  });
+
+  /* ---------------- MIDI EXPORT ---------------- */
+  function writeVarLen(value){
+    let buffer = value & 0x7f;
+    const bytes = [];
+    while ((value >>= 7) > 0){
+      buffer <<= 8;
+      buffer |= 0x80 | (value & 0x7f);
+    }
+    while(true){
+      bytes.push(buffer & 0xff);
+      if(buffer & 0x80) buffer >>= 8; else break;
+    }
+    return bytes;
+  }
+
+  function u32(n){ return [(n>>>24)&0xff,(n>>>16)&0xff,(n>>>8)&0xff,n&0xff]; }
+  function u16(n){ return [(n>>>8)&0xff, n&0xff]; }
+  function strBytes(s){ return s.split('').map(c=>c.charCodeAt(0)); }
+
+  function buildTempoTrack(bpm){
+    const microPerBeat = Math.round(60000000/bpm);
+    let data = [];
+    data.push(...writeVarLen(0), 0xFF,0x51,0x03, (microPerBeat>>16)&0xff, (microPerBeat>>8)&0xff, microPerBeat&0xff);
+    data.push(...writeVarLen(0), 0xFF,0x2F,0x00);
+    return [...strBytes('MTrk'), ...u32(data.length), ...data];
+  }
+
+  function buildInstrumentTrack(track, ticksPerStep){
+    const [defaultNote, channel] = MIDI_MAP[track];
+    const events = [];
+
+    if(MELODIC_TRACKS.includes(track)){
+      pattern[track].forEach(n=>{
+        const onTick = n.step * ticksPerStep;
+        const offTick = onTick + Math.max(2, Math.floor((n.length||1) * ticksPerStep * 0.92));
+        events.push({tick: onTick, type: 'on', note: n.note});
+        events.push({tick: offTick, type: 'off', note: n.note});
+      });
+    } else {
+      for(let i=0;i<STEPS;i++){
+        if(pattern[track][i]){
+          const onTick = i * ticksPerStep;
+          const offTick = onTick + Math.max(2, Math.floor(ticksPerStep * 0.85));
+          events.push({tick: onTick, type: 'on', note: defaultNote});
+          events.push({tick: offTick, type: 'off', note: defaultNote});
+        }
+      }
+    }
+
+    events.sort((a,b)=> a.tick - b.tick || (a.type==='off'?-1:1));
+
+    let data = [];
+    let lastTick = 0;
+    events.forEach(ev=>{
+      const delta = ev.tick - lastTick;
+      lastTick = ev.tick;
+      data.push(...writeVarLen(delta));
+      if(ev.type==='on'){
+        data.push(0x90 | channel, ev.note, 100);
+      } else {
+        data.push(0x80 | channel, ev.note, 0);
+      }
+    });
+    data.push(...writeVarLen(0), 0xFF,0x2F,0x00);
+    return [...strBytes('MTrk'), ...u32(data.length), ...data];
+  }
+
+  function buildMidiBytes(trackList){
+    const ticksPerBeat = 96;
+    const ticksPerStep = ticksPerBeat/4;
+    const nTracks = 1 + trackList.length;
+    const header = [
+      ...strBytes('MThd'), ...u32(6),
+      ...u16(1), ...u16(nTracks), ...u16(ticksPerBeat)
+    ];
+    let bytes = header.concat(buildTempoTrack(currentBpm));
+    trackList.forEach(t=>{ bytes = bytes.concat(buildInstrumentTrack(t, ticksPerStep)); });
+    return new Uint8Array(bytes);
+  }
+
+  function downloadMidi(trackList, suffix){
+    const bytes = buildMidiBytes(trackList);
+    const blob = new Blob([bytes], {type:'audio/midi'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pattern-rack-' + currentStyleKey + '-' + currentBpm + 'bpm' + (suffix ? '-'+suffix : '') + '.mid';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  const DRUM_TRACKS = TRACKS.filter(t => !MELODIC_TRACKS.includes(t));
+
+  exportBtn.addEventListener('click', ()=> downloadMidi(TRACKS, ''));
+  exportDrumsBtn.addEventListener('click', ()=> downloadMidi(DRUM_TRACKS, 'drums'));
+  exportMelodyBtn.addEventListener('click', ()=> downloadMidi(MELODIC_TRACKS, 'melody'));
+
+  /* ---------------- INIT ---------------- */
+  initPatternFromStyles();
+
+})();
+</script>
+</body>
+</html>
